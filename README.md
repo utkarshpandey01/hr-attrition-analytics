@@ -22,14 +22,9 @@ The system uses a **Decision Tree Classifier** trained on real HR analytics data
 
 
 ## Backend API
-Add your Render backend URL here
-
-```txt
-https://your-render-backend.onrender.com
-```
+https://hr-attrition-analytics.onrender.com
 
 ---
-
 
 # ✨ Features
 
