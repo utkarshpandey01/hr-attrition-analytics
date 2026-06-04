@@ -16,8 +16,11 @@ X_RAW_TEMPLATE = None
 def init_model():
     global MODEL, FEATURE_COLUMNS, X_RAW_TEMPLATE
     
-    # Load dataset - Ensure this path matches your folder structure exactly
+    # Load dataset 
     dataset_path = "WA_Fn-UseC_-HR-Employee-Attrition.csv"
+    if not os.path.exists(dataset_path):
+        raise FileNotFoundError(f"Could not find the dataset file: {dataset_path}")
+        
     df = pd.read_csv(dataset_path)
     
     # Drop uninformative columns
@@ -36,10 +39,18 @@ def init_model():
     MODEL.fit(X_encoded, y)
     
     FEATURE_COLUMNS = X_encoded.columns.tolist()
-    X_RAW_TEMPLATE = X_raw # Keep reference to the structure
+    X_RAW_TEMPLATE = X_raw 
 
 # Run the model setup on server boot
 init_model()
+
+# --- ADDED THIS TO FIX THE 404 NOT FOUND ERROR WHEN CLICKING THE LINK ---
+@app.route('/', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "online",
+        "message": "Backend server is running perfectly! Do not open the /predict link in your browser directly. Use your frontend UI to send data here."
+    }), 200
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -75,7 +86,6 @@ def predict():
         probabilities = MODEL.predict_proba(user_encoded)[0]
         risk_percentage = round(probabilities[1] * 100, 1)
         
-        # Pull tree architecture feature importances dynamically to pass back
         importances = dict(zip(FEATURE_COLUMNS, MODEL.feature_importances_))
         
         return jsonify({
@@ -87,8 +97,6 @@ def predict():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-# Single execution entry-point handling both local testing and Render environmental variables
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    # Using 0.0.0.0 makes it accessible to external platforms like Netlify
     app.run(host='0.0.0.0', port=port)
