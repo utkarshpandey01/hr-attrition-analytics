@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise HR Attrition Predictor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #04060d;
+            --glass-bg: rgba(8, 12, 24, 0.55);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --neon-danger: #ef4444;
+            --neon-success: #10b981;
+        }
+
+        * { 
+            box-sizing: border-box; margin: 0; padding: 0; 
+            font-family: 'SF Pro Display', -apple-system, 'Segoe UI', Roboto, sans-serif; 
+        }
+
+        body { 
+            /* Set up your background image parameters here */
+            background: linear-gradient(rgba(4, 6, 13, 0.45), rgba(4, 6, 13, 0.45)), 
+                        url('company-bg2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: var(--text-main); 
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; padding: 2rem 1rem; overflow-x: hidden;
+        }
+
+        .container { 
+            max-width: 1200px; width: 100%; z-index: 2; position: relative;
+            animation: translateUp 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        header { text-align: center; margin-bottom: 2.5rem; }
+        header h1 {
+            font-size: clamp(4rem, 8vw, 6.5rem);
+            font-weight: 1000;
+            letter-spacing: -4px;
+            line-height: 1;
+
+            display: inline-block;
+            position: relative;
+
+            /* Premium Clean Gradient */
+            background: linear-gradient(
+                135deg,
+                #ffffff 0%,
+                #dbeafe 20%,
+                #7dd3fc 45%,
+                #38bdf8 65%,
+                #818cf8 85%,
+                #ffffff 100%
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+
+            margin-bottom: 1rem;
+
+            /* Deep Premium Glow */
+            text-shadow:
+                0 2px 10px rgba(255,255,255,0.15),
+                0 6px 30px rgba(56,189,248,0.2),
+                0 10px 50px rgba(129,140,248,0.18);
+
+            filter:
+                drop-shadow(0 0 12px rgba(56,189,248,0.35))
+                drop-shadow(0 0 30px rgba(79,172,254,0.18));
+
+            padding: 10px 20px;
+        }
+
+        /* Soft Neon Background Glow */
+        header h1::before {
+            content: "";
+
+            position: absolute;
+            inset: 0;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(56,189,248,0.18),
+                    transparent 70%
+                );
+
+            filter: blur(25px);
+
+            z-index: -1;
+
+            border-radius: 20px;
+    }
+
+
+        /* header h1 {
+            font-size: clamp(4rem, 8vw, 6.5rem);
+            font-weight: 1000;
+            letter-spacing: -4px;
+            line-height: 0.95;
+
+            background: linear-gradient(
+                135deg,
+                #ffffff 0%,
+                #dbeafe 20%,
+                #7dd3fc 45%,
+                #38bdf8 65%,
+                #818cf8 85%,
+                #ffffff 100%
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+
+            text-align: center;
+
+            filter:
+                drop-shadow(0 0 12px rgba(56,189,248,0.35))
+                drop-shadow(0 0 30px rgba(79,172,254,0.18));
+
+            margin-bottom: 1rem;
+        } */
+
+       header h1 .emoji {
+            -webkit-text-fill-color: initial;
+            background: none;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 0.8em;
+
+            position: relative;
+            top: -10px;
+
+            margin-right: 18px;
+
+            filter: none;
+            text-shadow: none;
+
+            vertical-align: middle;
+}
+
+        header p { color: #cbd5e1; font-size: 1.1rem; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+
+        /* --- COMPARISON SCENARIO TRAY --- */
+        .scenario-tray {
+            display: flex; gap: 0.75rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.5rem;
+        }
+        .scenario-chip {
+            background: rgba(10, 16, 32, 0.6); border: 1px solid rgba(255,255,255,0.08);
+            padding: 0.5rem 1.2rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+            color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+            transition: all 0.3s ease; white-space: nowrap;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        .scenario-chip:hover { border-color: var(--accent-cyan); color: #fff; }
+        .scenario-chip.active { background: rgba(0, 242, 254, 0.15); border-color: var(--accent-cyan); color: #fff; }
+
+        .master-panel {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.00) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 32px; padding: 0.75rem;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+        }
+
+        /* --- DASHBOARD GRID GLASSMORPHISM OPTIMIZATION --- */
+         .dashboard-grid {
+            display: grid; 
+            grid-template-columns: 1.4fr 1fr; 
+            border-radius: 24px; 
+            overflow: hidden;
+            
+            /* --- HIGH-TRANSPARENCY GLASS EFFECT --- */
+            background: rgba(255, 255, 255, 0.02); /* Extremely clear tint so bg image shows through */
+            backdrop-filter: blur(20px) saturate(160%); /* High blur + saturation boosts background vibrancy */
+            -webkit-backdrop-filter: blur(30px) saturate(160%);
+            
+            /* Reflective perimeter border */
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            
+            /* Deep multi-layered drop shadow for depth separation */
+            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 0px rgba(255, 255, 255, 0.15); 
+        }
+
+        @media (max-width: 950px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        .left-panel { padding: 3rem 2.5rem; background: transparent; }
+        .analytics-panel {
+            padding: 3rem 2.5rem; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; text-align: center; background: rgba(0, 0, 0, 0.2);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .input-group { display: flex; flex-direction: column; gap: 0.6rem; position: relative; }
+        
+        /* Bolder, lighter labels to pop out against images */
+        label { 
+            font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #ffffff; 
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        
+        /* --- SLIDER UI CARDS BLOCK --- */
+        .slider-wrapper {
+            background: rgba(10, 16, 32, 0.5); border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 0.9rem 1.1rem; border-radius: 14px; display: flex; flex-direction: column; gap: 0.5rem;
+            position: relative; overflow: hidden; transition: all 0.3s ease;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .slider-wrapper.critical-weight {
+            border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1);
+        }
+        .slider-wrapper.critical-weight label { color: var(--neon-danger); }
+        .slider-chart-backdrop {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 35px; z-index: 1; pointer-events: none; opacity: 0.25;
+        }
+        .slider-header { display: flex; justify-content: space-between; align-items: center; width: 100%; z-index: 2; position: relative; }
+        .value-display { font-weight: 700; font-size: 1rem; color: #00f2fe; font-family: monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        input[type="range"] { width: 100%; accent-color: var(--accent-cyan); background: #141b2e; height: 6px; border-radius: 3px; cursor: pointer; z-index: 2; position: relative; }
+        
+        select { background: #090d16; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 0.9rem 1.2rem; border-radius: 14px; outline: none; font-size: 0.95rem; cursor: pointer; }
+        select:focus { border-color: var(--accent-cyan); box-shadow: 0 0 20px rgba(6, 182, 212, 0.15); }
+        
+        .action-flex { display: flex; gap: 1rem; margin-top: 2rem; }
+        button { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #020617; font-weight: 800; border: none; padding: 1.2rem; border-radius: 16px; cursor: pointer; font-size: 1.1rem; flex: 1; transition: all 0.3s ease; box-shadow: 0 8px 30px rgba(79, 172, 254, 0.25); text-transform: uppercase; }
+        button:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(6, 182, 212, 0.4); }
+        .btn-secondary { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; box-shadow: none; flex: 0.4; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: #fff; transform: translateY(-2px); }
+
+        /* --- PROGRESS RING CORE --- */
+        .radial-progress { position: relative; width: 220px; height: 220px; margin-bottom: 1.5rem; }
+        .radial-progress svg { width: 220px; height: 220px; transform: rotate(-90deg); }
+        .radial-progress circle { width: 100%; height: 100%; fill: none; stroke-width: 14; stroke-linecap: round; }
+        .radial-progress circle.bg { stroke: rgba(255, 255, 255, 0.04); }
+        .radial-progress circle.progress-bar { stroke: url(#gradient-cyan); stroke-dasharray: 565; stroke-dashoffset: 565; transition: stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .percentage-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.6rem; font-weight: 900; color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+        .status-badge { padding: 0.7rem 1.8rem; border-radius: 30px; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.08em; margin-bottom: 1.5rem; display: inline-block; opacity: 0; transform: scale(0.85); transition: all 0.5s ease; }
+        .status-badge.active { opacity: 1; transform: scale(1); }
+        .status-badge.safe { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--neon-success); color: #a7f3d0; }
+        .status-badge.risk { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--neon-danger); color: #fca5a5; animation: pulseGlow 2s infinite; }
+
+        .insights-text { color: #e2e8f0; font-size: 0.95rem; line-height: 1.6; max-width: 320px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
+
+        /* --- WHAT-IF MACHINE GRID --- */
+        .whatif-container { width: 100%; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1.5rem; padding-top: 1.5rem; display: none; text-align: left; animation: translateUp 0.5s ease; }
+        .whatif-title { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: #e2e8f0; letter-spacing: 0.05em; margin-bottom: 0.75rem; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .whatif-row { display: flex; justify-content: space-between; background: rgba(10, 16, 32, 0.6); padding: 0.65rem 1rem; border-radius: 10px; margin-bottom: 0.5rem; border: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+        .whatif-row span.fix { color: var(--neon-success); font-weight: 700; }
+
+        /* --- PLAIN ENGLISH EXPLANATION SYSTEM CARD --- */
+        .info-card-container { margin-top: 2rem; background: rgba(10, 16, 32, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; overflow: hidden; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .info-card-header { background: rgba(255, 255, 255, 0.02); padding: 0.85rem 1.2rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #ffffff; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; transition: background 0.3s ease; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .info-card-header:hover { background: rgba(0, 242, 254, 0.08); }
+        .info-card-content { padding: 0 1.2rem; max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding 0.4s ease; display: flex; flex-direction: column; gap: 1rem; }
+        .info-card-content.open { padding: 1.2rem; max-height: 500px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+        .info-grid-row { font-size: 0.85rem; line-height: 1.5; }
+        .info-grid-row strong { color: #00f2fe; display: block; margin-bottom: 0.2rem; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+        .info-grid-row p { color: #cbd5e1; }
+
+        @keyframes translateUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.15); } 50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.35); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1><span class="emoji"></span>Enterprise HR<br>  Attrition Predictor</h1>
+        <p>Send employee metric payloads directly to the Python Decision Tree ML engine</p>
+    </header>
+
+    <div class="scenario-tray" id="scenarioTray">
+        <div class="scenario-chip active" onclick="loadScenario('default')">✨ Live Canvas Workspace</div>
+    </div>
+
+    <div class="master-panel">
+        <div class="dashboard-grid">
+            
+            <div class="left-panel">
+                <form id="predictorForm" onsubmit="calculateRisk(event)">
+                    <div class="form-grid">
+                        
+                        <div class="input-group" id="grp_Age">
+                            <div class="slider-wrapper">
+                                <div class="slider-header">
+                                    <label>Age</label>
+                                    <span class="value-display" id="Age_val">35</span>
+                                </div>
+                                <canvas class="slider-chart-backdrop" id="chart_Age"></canvas>
+                                <input type="range" id="Age" min="18" max="60" value="35" oninput="updateVal('Age', this.value)">
+                            </div>
+                        </div>
+
+                        <div class="input-group" id="grp_MonthlyIncome">
+                            <div class="slider-wrapper">
+                                <div class="slider-header">
+                                    <label>Monthly Income</label>
+                                    <span class="value-display" id="MonthlyIncome_val">₹75,000</span>
+                                </div>
+                                <canvas class="slider-chart-backdrop" id="chart_MonthlyIncome"></canvas>
+                                <input type="range" id="MonthlyIncome" min="1000" max="300000" step="1000" value="75000" oninput="updateVal('MonthlyIncome', this.value)">
+                            </div>
+                        </div>
+
+
+                        <div class="input-group" id="grp_YearsAtCompany">
+                            <div class="slider-wrapper">
+                                <div class="slider-header">
+                                    <label>Years at Company</label>
+                                    <span class="value-display" id="YearsAtCompany_val">5</span>
+                                </div>
+                                <canvas class="slider-chart-backdrop" id="chart_YearsAtCompany"></canvas>
+                                <input type="range" id="YearsAtCompany" min="0" max="40" value="5" oninput="updateVal('YearsAtCompany', this.value)">
+                            </div>
+                        </div>
+
+                        <div class="input-group" id="grp_TotalWorkingYears">
+                            <div class="slider-wrapper">
+                                <div class="slider-header">
+                                    <label>Total Working Years</label>
+                                    <span class="value-display" id="TotalWorkingYears_val">10</span>
+                                </div>
+                                <canvas class="slider-chart-backdrop" id="chart_TotalWorkingYears"></canvas>
+                                <input type="range" id="TotalWorkingYears" min="0" max="40" value="10" oninput="updateVal('TotalWorkingYears', this.value)">
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="grid-column: span 2;" id="grp_DistanceFromHome">
+                            <div class="slider-wrapper">
+                                <div class="slider-header">
+                                    <label>Distance From Home (km)</label>
+                                    <span class="value-display" id="DistanceFromHome_val">5 km</span>
+                                </div>
+                                <canvas class="slider-chart-backdrop" id="chart_DistanceFromHome"></canvas>
+                                <input type="range" id="DistanceFromHome" min="1" max="30" value="5" oninput="updateVal('DistanceFromHome', this.value)">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Overtime Work</label>
+                            <select id="OverTime">
+                                <option value="Yes">Yes</option>
+                                <option value="No" selected>No</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Business Travel Frequency</label>
+                            <select id="BusinessTravel">
+                                <option value="Travel_Rarely" selected>Travel_Rarely</option>
+                                <option value="Travel_Frequently">Travel_Frequently</option>
+                                <option value="Non-Travel">Non-Travel</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Department</label>
+                            <select id="Department">
+                                <option value="Research & Development" selected>Research & Development</option>
+                                <option value="Sales">Sales</option>
+                                <option value="Human Resources">Human Resources</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Marital Status</label>
+                            <select id="MaritalStatus">
+                                <option value="Single" selected>Single</option>
+                                <option value="Married">Married</option>
+                                <option value="Divorced">Divorced</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="action-flex">
+                        <button type="submit">Analyze Attrition Risk</button>
+                
+                    </div>
+                </form>
+
+                <div class="info-card-container">
+                    <div class="info-card-header" onclick="toggleInfoSection()">
+                        <span>ℹ️ About This Analytics Dashboard</span>
+                        <span id="infoChevron" style="transition: transform 0.3s ease;">▼</span>
+                    </div>
+                    <div class="info-card-content open" id="infoContent">
+                        <div class="info-grid-row">
+                            <strong>What is this tool?</strong>
+                            <p>This is a predictive dashboard that calculates whether an employee is likely to stay at the company or leave.</p>
+                        </div>
+                        <div class="info-grid-row">
+                            <strong>How does it work?</strong>
+                            <p>It is powered by a Machine Learning algorithm called a <strong>Decision Tree Classifier</strong>. Think of it like a smart flowchart that has learned from past company data to isolate critical turnover patterns.</p>
+                        </div>
+                        <div class="info-grid-row">
+                            <strong>What do you need to do?</strong>
+                            <p>Simply adjust the factors on the left—like Monthly Income, Age, and Overtime Status—using the sliders and dropdowns. When you click "Analyze", the algorithm processes your custom configuration and flags potential risks in real-time!</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="analytics-panel">
+                <label style="margin-bottom: 1.5rem;">Computed Attrition Probability</label>
+                
+                <div class="radial-progress">
+                    <svg>
+                        <defs>
+                            <linearGradient id="gradient-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#00f2fe" />
+                                <stop offset="100%" stop-color="#4facfe" />
+                            </linearGradient>
+                            <linearGradient id="gradient-danger" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ef4444" />
+                                <stop offset="100%" stop-color="#ff007f" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="bg" cx="110" cy="110" r="90"></circle>
+                        <circle class="progress-bar" id="progressBar" cx="110" cy="110" r="90"></circle>
+                    </svg>
+                    <div class="percentage-center" id="percentageDisplay">0%</div>
+                </div>
+
+                <div id="badge" class="status-badge">Awaiting Pipeline Data</div>
+                <p id="insights" class="insights-text">Adjust configuration items on the left node bank and request processing initialization.</p>
+                
+                <div class="whatif-container" id="whatifBox">
+                    <div class="whatif-title">🛠️ Recommended Risk Interventions</div>
+                    <div id="whatifList"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // DYNAMIC BACKDROP CHART RENDERER (CHART.JS)
+    function buildSliderBackdropChart(canvasId, labels, dataPoints) {
+        new Chart(document.getElementById(canvasId), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataPoints,
+                    borderColor: '#00f2fe',
+                    borderWidth: 1.5,
+                    fill: true,
+                    backgroundColor: 'rgba(0, 242, 254, 0.04)',
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: { x: { display: false }, y: { display: false } },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Draw average corporate distribution curves on the back of slider tracks
+    buildSliderBackdropChart('chart_Age', [20,25,30,35,40,45,50,55,60], [10,30,70,90,65,40,25,12,5]);
+    buildSliderBackdropChart('chart_MonthlyIncome', [10,40,70,100,130,160,190,220,250], [80,95,60,35,20,12,8,4,2]);
+    buildSliderBackdropChart('chart_YearsAtCompany', [0,5,10,15,20,25,30,35,40], [90,75,40,20,10,5,2,1,0]);
+    buildSliderBackdropChart('chart_TotalWorkingYears', [0,5,10,15,20,25,30,35,40], [40,85,90,55,35,20,12,5,1]);
+    buildSliderBackdropChart('chart_DistanceFromHome', [1,5,10,15,20,25,30], [95,70,45,30,20,10,5]);
+
+    let savedScenarios = {};
+
+    function updateVal(id, val) {
+        let suffix = "";
+        if (id === 'MonthlyIncome') suffix = `₹${parseInt(val).toLocaleString('en-IN')}`;
+        else if (id === 'DistanceFromHome') suffix = `${val} km`;
+        else suffix = val;
+        document.getElementById(id + '_val').innerText = suffix;
+    }
+
+    function toggleInfoSection() {
+        const content = document.getElementById('infoContent');
+        const chevron = document.getElementById('infoChevron');
+        
+        // Toggle the visibility class
+        content.classList.toggle('open');
+        
+        // Correct the arrow direction:
+        // If it's open, rotate 180deg to face UP. If closed, reset to 0deg to face DOWN.
+        if (content.classList.contains('open')) {
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            chevron.style.transform = 'rotate(0deg)';
+        }
+}
+
+    // ML BACKEND API CALL PIPELINE
+    async function calculateRisk(event) {
+        if(event) event.preventDefault();
+        
+        const progressBar = document.getElementById('progressBar');
+        const percentageDisplay = document.getElementById('percentageDisplay');
+        const badge = document.getElementById('badge');
+        const insights = document.getElementById('insights');
+        const whatifBox = document.getElementById('whatifBox');
+        const whatifList = document.getElementById('whatifList');
+        
+        const payload = {
+            Age: document.getElementById('Age').value,
+            MonthlyIncome: document.getElementById('MonthlyIncome').value,
+            YearsAtCompany: document.getElementById('YearsAtCompany').value,
+            TotalWorkingYears: document.getElementById('TotalWorkingYears').value,
+            DistanceFromHome: document.getElementById('DistanceFromHome').value,
+            OverTime: document.getElementById('OverTime').value,
+            BusinessTravel: document.getElementById('BusinessTravel').value,
+            Department: document.getElementById('Department').value,
+            MaritalStatus: document.getElementById('MaritalStatus').value
+        };
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            const risk = data.risk_percentage;
+            
+            const circumference = 565;
+            const strokeOffset = circumference - (risk / 100) * circumference;
+            progressBar.style.strokeDashoffset = strokeOffset;
+            percentageDisplay.innerText = `${risk}%`;
+
+            badge.className = "status-badge active";
+            
+            // Dynamic feature importance highlights
+            document.querySelectorAll('.slider-wrapper').forEach(el => el.classList.remove('critical-weight'));
+            if (payload.OverTime === 'Yes') {
+                document.getElementById('grp_OverTime')?.classList.add('critical-weight');
+            }
+            if (payload.MonthlyIncome < 3500) {
+                document.getElementById('grp_MonthlyIncome').classList.add('critical-weight');
+            }
+
+            if(data.attrition_risk === 1) {
+                progressBar.style.stroke = "url(#gradient-danger)";
+                badge.className = "status-badge active risk";
+                badge.innerText = "CRITICAL RISK PROFILE";
+                insights.innerText = "Model indicates high turnover probability. Review actionable mitigation steps below.";
+                
+                // Mount automated What-If rules
+                whatifBox.style.display = "block";
+                let fixes = "";
+                if(payload.OverTime === 'Yes') {
+                    fixes += `<div class="whatif-row"><span>Eliminate Overtime Requirements</span><span class="fix">Drops Risk ~31%</span></div>`;
+                }
+                if(payload.MonthlyIncome < 6000) {
+                    fixes += `<div class="whatif-row"><span>Adjust Monthly Income to ₹7,500</span><span class="fix">Drops Risk ~18%</span></div>`;
+                }
+                if(payload.DistanceFromHome > 12) {
+                    fixes += `<div class="whatif-row"><span>Approve Partial Remote Schedule</span><span class="fix">Drops Risk ~12%</span></div>`;
+                }
+                whatifList.innerHTML = fixes || `<div class="whatif-row"><span>Review role mapping criteria</span></div>`;
+            } else {
+                progressBar.style.stroke = "url(#gradient-cyan)";
+                badge.className = "status-badge active safe";
+                badge.innerText = "STABLE PROFILE DETECTED";
+                insights.innerText = "All performance vectors are tracking within comfortable retention limits.";
+                whatifBox.style.display = "none";
+            }
+        } catch (error) {
+            percentageDisplay.innerText = "ERR";
+            badge.className = "status-badge active risk";
+            badge.innerText = "PIPELINE BREAK";
+        }
+    }
+
+    // LOCAL STORAGE SNAPSHOT COMPARISONS
+    function pinCurrentScenario() {
+        const id = "case_" + Date.now();
+        const alias = prompt("Give this employee configuration a snapshot name:", `Employee Scenario ${Object.keys(savedScenarios).length + 1}`);
+        if(!alias) return;
+
+        savedScenarios[id] = {
+            label: alias,
+            Age: document.getElementById('Age').value,
+            MonthlyIncome: document.getElementById('MonthlyIncome').value,
+            YearsAtCompany: document.getElementById('YearsAtCompany').value,
+            TotalWorkingYears: document.getElementById('TotalWorkingYears').value,
+            DistanceFromHome: document.getElementById('DistanceFromHome').value,
+            OverTime: document.getElementById('OverTime').value,
+            BusinessTravel: document.getElementById('BusinessTravel').value,
+            Department: document.getElementById('Department').value,
+            MaritalStatus: document.getElementById('MaritalStatus').value,
+            score: document.getElementById('percentageDisplay').innerText
+        };
+
+        const tray = document.getElementById('scenarioTray');
+        const chip = document.createElement('div');
+        chip.className = "scenario-chip";
+        chip.id = id;
+        chip.onclick = () => loadScenario(id);
+        chip.innerHTML = `📌 ${alias} (${savedScenarios[id].score})`;
+        tray.appendChild(chip);
+    }
+
+    function loadScenario(id) {
+        document.querySelectorAll('.scenario-chip').forEach(c => c.classList.remove('active'));
+        
+        if(id === 'default') {
+            document.querySelector('.scenario-chip').classList.add('active');
+            return;
+        }
+
+        const data = savedScenarios[id];
+        document.getElementById(id).classList.add('active');
+
+        const metrics = ['Age', 'MonthlyIncome', 'YearsAtCompany', 'TotalWorkingYears', 'DistanceFromHome', 'OverTime', 'BusinessTravel', 'Department', 'MaritalStatus'];
+        metrics.forEach(m => {
+            document.getElementById(m).value = data[m];
+            updateVal(m, data[m]);
+        });
+
+        calculateRisk();
+    }
+</script>
+</body>
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
