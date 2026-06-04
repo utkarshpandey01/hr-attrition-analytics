@@ -2,14 +2,7 @@
 
 A futuristic AI-powered Employee Attrition Prediction Dashboard built using **Machine Learning**, **Flask**, and a premium **Glassmorphism UI**.
 
-# 🌐 Live Demo
-
-## Frontend
-Add your Netlify link here
-
-```txt
-https://enterprise-hr-attrition-predictor.netlify.app/
-```
+# 🌐 Live Demo : https://enterprise-hr-attrition-predictor.netlify.app/
 
 This project predicts whether an employee is likely to leave the company based on critical workplace and behavioral factors such as:
 
