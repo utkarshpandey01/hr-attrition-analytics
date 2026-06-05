@@ -310,10 +310,10 @@
                             <div class="slider-wrapper">
                                 <div class="slider-header">
                                     <label>Monthly Income</label>
-                                    <span class="value-display" id="MonthlyIncome_val">₹75,000</span>
+                                    <span class="value-display" id="MonthlyIncome_val">₹8,000</span>
                                 </div>
                                 <canvas class="slider-chart-backdrop" id="chart_MonthlyIncome"></canvas>
-                                <input type="range" id="MonthlyIncome" min="1000" max="300000" step="1000" value="75000" oninput="updateVal('MonthlyIncome', this.value)">
+                                <input type="range" id="MonthlyIncome" min="1000" max="20000" step="500" value="8000" oninput="updateVal('MonthlyIncome', this.value)">
                             </div>
                         </div>
 
@@ -510,86 +510,188 @@
 }
 
     // ML BACKEND API CALL PIPELINE
-    async function calculateRisk(event) {
-        if(event) event.preventDefault();
-        
-        const progressBar = document.getElementById('progressBar');
-        const percentageDisplay = document.getElementById('percentageDisplay');
-        const badge = document.getElementById('badge');
-        const insights = document.getElementById('insights');
-        const whatifBox = document.getElementById('whatifBox');
-        const whatifList = document.getElementById('whatifList');
-        
-        const payload = {
-            Age: document.getElementById('Age').value,
-            MonthlyIncome: document.getElementById('MonthlyIncome').value,
-            YearsAtCompany: document.getElementById('YearsAtCompany').value,
-            TotalWorkingYears: document.getElementById('TotalWorkingYears').value,
-            DistanceFromHome: document.getElementById('DistanceFromHome').value,
-            OverTime: document.getElementById('OverTime').value,
-            BusinessTravel: document.getElementById('BusinessTravel').value,
-            Department: document.getElementById('Department').value,
-            MaritalStatus: document.getElementById('MaritalStatus').value
-        };
+   async function calculateRisk(event) {
 
-        try {
-            const response = await fetch('https://hr-attrition-analytics.onrender.com/predict', {
+    if (event) event.preventDefault();
+
+    const progressBar = document.getElementById('progressBar');
+    const percentageDisplay = document.getElementById('percentageDisplay');
+    const badge = document.getElementById('badge');
+    const insights = document.getElementById('insights');
+    const whatifBox = document.getElementById('whatifBox');
+    const whatifList = document.getElementById('whatifList');
+
+    // ==========================================
+    // PAYLOAD
+    // ==========================================
+
+    const payload = {
+
+        Age: parseInt(document.getElementById('Age').value),
+
+        MonthlyIncome: parseInt(document.getElementById('MonthlyIncome').value),
+
+        YearsAtCompany: parseInt(document.getElementById('YearsAtCompany').value),
+
+        TotalWorkingYears: parseInt(document.getElementById('TotalWorkingYears').value),
+
+        DistanceFromHome: parseInt(document.getElementById('DistanceFromHome').value),
+
+        OverTime: document.getElementById('OverTime').value,
+
+        BusinessTravel: document.getElementById('BusinessTravel').value,
+
+        Department: document.getElementById('Department').value,
+
+        MaritalStatus: document.getElementById('MaritalStatus').value
+    };
+
+    console.log("Sending Payload:", payload);
+
+    try {
+
+        // ==========================================
+        // FETCH API
+        // ==========================================
+
+        const response = await fetch(
+            'https://hr-attrition-analytics.onrender.com/predict',
+            {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+
                 body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-            const risk = data.risk_percentage;
-            
-            const circumference = 565;
-            const strokeOffset = circumference - (risk / 100) * circumference;
-            progressBar.style.strokeDashoffset = strokeOffset;
-            percentageDisplay.innerText = `${risk}%`;
-
-            badge.className = "status-badge active";
-            
-            // Dynamic feature importance highlights
-            document.querySelectorAll('.slider-wrapper').forEach(el => el.classList.remove('critical-weight'));
-            if (payload.OverTime === 'Yes') {
-                document.getElementById('grp_OverTime')?.classList.add('critical-weight');
             }
-            if (payload.MonthlyIncome < 3500) {
-                document.getElementById('grp_MonthlyIncome').classList.add('critical-weight');
-            }
+        );
 
-            if(data.attrition_risk === 1) {
-                progressBar.style.stroke = "url(#gradient-danger)";
-                badge.className = "status-badge active risk";
-                badge.innerText = "CRITICAL RISK PROFILE";
-                insights.innerText = "Model indicates high turnover probability. Review actionable mitigation steps below.";
-                
-                // Mount automated What-If rules
-                whatifBox.style.display = "block";
-                let fixes = "";
-                if(payload.OverTime === 'Yes') {
-                    fixes += `<div class="whatif-row"><span>Eliminate Overtime Requirements</span><span class="fix">Drops Risk ~31%</span></div>`;
-                }
-                if(payload.MonthlyIncome < 6000) {
-                    fixes += `<div class="whatif-row"><span>Adjust Monthly Income to ₹7,500</span><span class="fix">Drops Risk ~18%</span></div>`;
-                }
-                if(payload.DistanceFromHome > 12) {
-                    fixes += `<div class="whatif-row"><span>Approve Partial Remote Schedule</span><span class="fix">Drops Risk ~12%</span></div>`;
-                }
-                whatifList.innerHTML = fixes || `<div class="whatif-row"><span>Review role mapping criteria</span></div>`;
-            } else {
-                progressBar.style.stroke = "url(#gradient-cyan)";
-                badge.className = "status-badge active safe";
-                badge.innerText = "STABLE PROFILE DETECTED";
-                insights.innerText = "All performance vectors are tracking within comfortable retention limits.";
-                whatifBox.style.display = "none";
-            }
-        } catch (error) {
-            percentageDisplay.innerText = "ERR";
-            badge.className = "status-badge active risk";
-            badge.innerText = "PIPELINE BREAK";
+        // ==========================================
+        // RESPONSE
+        // ==========================================
+
+        const data = await response.json();
+
+        console.log("Backend Response:", data);
+
+        // ==========================================
+        // ERROR CHECK
+        // ==========================================
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || "Backend Error");
         }
+
+        // ==========================================
+        // GET RISK
+        // ==========================================
+
+        const risk = Number(data.risk_percentage);
+
+        if (isNaN(risk)) {
+            throw new Error("Risk percentage is invalid");
+        }
+
+        // ==========================================
+        // PROGRESS RING
+        // ==========================================
+
+        const circumference = 565;
+
+        const strokeOffset =
+            circumference - (risk / 100) * circumference;
+
+        progressBar.style.strokeDashoffset = strokeOffset;
+
+        percentageDisplay.innerText = `${risk}%`;
+
+        badge.className = "status-badge active";
+
+        // ==========================================
+        // UI STATES
+        // ==========================================
+
+        if (data.attrition_risk === 1) {
+
+            progressBar.style.stroke = "url(#gradient-danger)";
+
+            badge.className =
+                "status-badge active risk";
+
+            badge.innerText =
+                "CRITICAL RISK PROFILE";
+
+            insights.innerText =
+                "Model indicates high turnover probability.";
+
+            whatifBox.style.display = "block";
+
+            let fixes = "";
+
+            if (payload.OverTime === 'Yes') {
+
+                fixes += `
+                <div class="whatif-row">
+                    <span>Reduce Overtime</span>
+                    <span class="fix">Lower Risk</span>
+                </div>
+                `;
+            }
+
+            if (payload.DistanceFromHome > 15) {
+
+                fixes += `
+                <div class="whatif-row">
+                    <span>Remote Work Option</span>
+                    <span class="fix">Lower Risk</span>
+                </div>
+                `;
+            }
+
+            whatifList.innerHTML =
+                fixes ||
+                `<div class="whatif-row">
+                    <span>Review employee engagement</span>
+                </div>`;
+
+        }
+
+        else {  
+
+            progressBar.style.stroke =
+                "url(#gradient-cyan)";
+
+            badge.className =
+                "status-badge active safe";
+
+            badge.innerText =
+                "STABLE PROFILE DETECTED";
+
+            insights.innerText =
+                "Employee retention probability is stable.";
+
+            whatifBox.style.display = "none";
+        }
+
     }
+
+    catch (error) {
+
+        console.error(error);
+
+        percentageDisplay.innerText = "ERR";
+
+        badge.className =
+            "status-badge active risk";
+
+        badge.innerText =
+            "PIPELINE BREAK";
+
+        insights.innerText =
+            error.message;
+    }
+}ho
 
     // LOCAL STORAGE SNAPSHOT COMPARISONS
     function pinCurrentScenario() {
